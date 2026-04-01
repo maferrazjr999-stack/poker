@@ -224,7 +224,7 @@
     <table class="ranking-table">
       <thead><tr>
         <th>#</th><th>Jogador</th>
-        <th class="num">Vitórias</th><th class="num">% Vitória</th>
+        <th class="num">Vitórias</th><th class="num">Pontos</th><th class="num">% Vitória</th>
         <th class="num">Freq.</th><th class="num">🪫</th>
       </tr></thead>
       <tbody id="ranking-body"></tbody>
@@ -282,7 +282,8 @@
       <h2>Como funciona</h2>
       <p style="font-size:0.9rem;color:var(--cream-dim);line-height:1.9">
         <strong style="color:var(--gold)">Partida ao vivo:</strong> ao iniciar um torneio, marque os presentes e vá eliminando conforme saem. O último é o campeão.<br>
-        <strong style="color:var(--gold)">Ranking:</strong> ordenado por vitórias. Empate: % vitória → torneios disputados.<br>
+        <strong style="color:var(--gold)">Ranking:</strong> ordenado por vitórias. Empate: % vitória → pontos → torneios disputados.<br>
+        <strong style="color:var(--gold)">Pontos:</strong> calculados por posição em cada torneio — nº de jogadores − posição + 1. Ex: 1º com 10 jogadores = 10pts, 2º = 9pts…<br>
         <strong style="color:var(--gold)">% Vitória:</strong> vitórias ÷ torneios participados × 100.<br>
         <strong style="color:var(--gold)">Frequência:</strong> % de torneios que o jogador compareceu.<br>
         <strong style="color:var(--gold)">🪫 Lanterna:</strong> vezes que o jogador foi o primeiro eliminado.
@@ -512,18 +513,19 @@ function applyAdminUI() {
 
 // ── STATS ──────────────────────────────────────────────
 function getStats(id) {
-  let wins=0, participated=0, lanterna=0;
+  let wins=0, participated=0, lanterna=0, points=0;
   for (const t of state.tournaments) {
     const i = t.results.indexOf(id); if (i===-1) continue;
     participated++;
     if (i===0) wins++;
     if (i===t.results.length-1) lanterna++;
+    points += t.results.length - i; // nº jogadores - posição + 1
   }
-  const p   = state.players.find(x=>x.id===id);
+  const p      = state.players.find(x=>x.id===id);
   const legacy = (p && p.legacyWins) ? p.legacyWins : 0;
-  const tot = state.tournaments.length;
-  return { wins: wins + legacy, winsReal: wins, legacyWins: legacy,
-    participated, lanterna, totalTournaments: tot,
+  const tot    = state.tournaments.length;
+  return { wins: wins+legacy, winsReal: wins, legacyWins: legacy,
+    points, participated, lanterna, totalTournaments: tot,
     freq:    tot>0 ? participated/tot*100 : 0,
     winRate: participated>0 ? (wins+legacy)/Math.max(participated,1)*100 : (legacy>0?100:0) };
 }
@@ -546,7 +548,7 @@ function renderRanking() {
   if (state.players.length===0) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   const rows = state.players.map(p=>({...p,...getStats(p.id)}));
-  rows.sort((a,b)=>b.wins-a.wins||b.winRate-a.winRate||b.participated-a.participated);
+  rows.sort((a,b)=>b.wins-a.wins||b.winRate-a.winRate||b.points-a.points||b.participated-a.participated);
   tbody.innerHTML = rows.map((p,i)=>{
     const pos=i+1, medals=['🥇','🥈','🥉'], medal=pos<=3?medals[pos-1]:'';
     const wr = p.participated>0 ? `${p.winRate.toFixed(1)}%` : '—';
@@ -558,6 +560,7 @@ function renderRanking() {
       <td><span class="rank-pos">${medal||pos}</span></td>
       <td class="player-name-cell">${esc(p.name)}</td>
       <td class="num pts">${p.wins}</td>
+      <td class="num" style="color:var(--cream-dim);font-size:0.95rem">${p.points}</td>
       <td class="num wr ${p.winRate>=20?'good':''}">${wr}<br><span style="font-size:0.75rem;color:var(--cream-dim)">${p.participated}/${p.totalTournaments} torneios</span></td>
       <td class="num freq">${fr}</td>
       <td class="num">${la}</td>
@@ -612,6 +615,7 @@ function renderPlayers() {
     return `<div class="player-card">
       <h3>${esc(p.name)}</h3>
       <div class="stat-row"><span class="stat-label">Vitórias</span><span class="stat-val">${s.wins}${s.legacyWins>0?` <span style="font-size:0.72rem;color:var(--gold-dim)">(+${s.legacyWins} ant.)</span>`:''}</span></div>
+      <div class="stat-row"><span class="stat-label">Pontos</span><span class="stat-val">${s.points}</span></div>
       <div class="stat-row"><span class="stat-label">% Vitória</span><span class="stat-val">${s.participated>0?s.winRate.toFixed(1)+'%':'—'}</span></div>
       <div class="stat-row"><span class="stat-label">Torneios</span><span class="stat-val">${s.participated} / ${s.totalTournaments}</span></div>
       <div class="stat-row"><span class="stat-label">Frequência</span><span class="stat-val">${s.participated>0?s.freq.toFixed(0)+'%':'—'}</span></div>
