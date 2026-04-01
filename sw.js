@@ -1,4 +1,4 @@
-const CACHE = 'poker-night-v1';
+const CACHE = 'poker-night-v2';
 const ASSETS = [
   './',
   './index.html',
