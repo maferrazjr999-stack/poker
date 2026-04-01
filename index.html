@@ -74,7 +74,7 @@
   .container { max-width:900px; margin:0 auto; padding:24px 16px 0; }
   .panel { display:none; } .panel.active { display:block; }
 
-  /* RANKING */
+  /* RANKING — desktop: tabela / mobile: cards */
   .ranking-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:8px; }
   .ranking-meta h2 { font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold); font-weight:700; }
   .season-badge { background:var(--gold-dim); color:var(--cream); font-size:0.78rem; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; border-radius:2px; }
@@ -92,6 +92,33 @@
   .pts { font-family:'Playfair Display',serif; font-size:1.15rem; color:var(--gold-light); font-weight:700; }
   .wr { color:var(--cream-dim); font-size:0.9rem; } .wr.good { color:#6fcf97; }
   .freq { font-size:0.85rem; color:var(--cream-dim); }
+
+  /* Ranking cards — mobile */
+  .ranking-cards { display:none; flex-direction:column; gap:10px; }
+  .rank-card { background:var(--card-bg); border:1px solid rgba(201,168,76,0.15); border-left:4px solid var(--gold-dim); padding:12px 14px; }
+  .rank-card.rc-1 { border-left-color:var(--gold-light); }
+  .rank-card.rc-2 { border-left-color:#b0bec5; }
+  .rank-card.rc-3 { border-left-color:#cd7f32; }
+  .rank-card-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .rank-card-pos { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; min-width:36px; text-align:center; color:var(--gold-dim); }
+  .rc-1 .rank-card-pos { color:var(--gold-light); }
+  .rc-2 .rank-card-pos { color:#b0bec5; }
+  .rc-3 .rank-card-pos { color:#cd7f32; }
+  .rank-card-name { font-size:1.05rem; font-weight:700; flex:1; }
+  .rank-card-wins { text-align:right; }
+  .rank-card-wins-num { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:700; color:var(--gold-light); line-height:1; }
+  .rank-card-wins-lbl { font-size:0.62rem; color:var(--gold-dim); text-transform:uppercase; letter-spacing:1px; }
+  .rank-card-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .rc-stat { background:rgba(255,255,255,0.03); padding:6px 4px; text-align:center; border:1px solid rgba(201,168,76,0.1); }
+  .rc-stat-val { font-size:0.9rem; font-weight:600; color:var(--cream); }
+  .rc-stat-val.good { color:#6fcf97; }
+  .rc-stat-val.red  { color:var(--red-light); }
+  .rc-stat-lbl { font-size:0.58rem; color:var(--gold-dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+
+  @media (max-width:620px) {
+    .ranking-table { display:none; }
+    .ranking-cards { display:flex; }
+  }
 
   /* TORNEIOS */
   .tournaments-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
@@ -229,6 +256,7 @@
       </tr></thead>
       <tbody id="ranking-body"></tbody>
     </table>
+    <div id="ranking-cards" class="ranking-cards"></div>
     <div id="ranking-empty" class="empty" style="display:none"><span>🃏</span>Nenhum torneio registrado ainda.</div>
   </div>
 
@@ -370,7 +398,6 @@
   </div>
 </div>
 
-<!-- MODAL EDITAR JOGADOR -->
 <div id="modal-edit-player" class="modal-overlay">
   <div class="modal">
     <h2>Editar Jogador</h2>
@@ -541,16 +568,21 @@ window.showPanel = showPanel;
 
 // ── RANKING ────────────────────────────────────────────
 function renderRanking() {
-  const tbody = document.getElementById('ranking-body');
-  const empty = document.getElementById('ranking-empty');
+  const tbody  = document.getElementById('ranking-body');
+  const cards  = document.getElementById('ranking-cards');
+  const empty  = document.getElementById('ranking-empty');
   document.getElementById('ranking-info').textContent =
     state.tournaments.length + ' torneio' + (state.tournaments.length!==1?'s':'');
-  if (state.players.length===0) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  if (state.players.length===0) { tbody.innerHTML=''; cards.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   const rows = state.players.map(p=>({...p,...getStats(p.id)}));
   rows.sort((a,b)=>b.wins-a.wins||b.winRate-a.winRate||b.points-a.points||b.participated-a.participated);
+
+  const medals = ['🥇','🥈','🥉'];
+
+  // ── Desktop table rows ──
   tbody.innerHTML = rows.map((p,i)=>{
-    const pos=i+1, medals=['🥇','🥈','🥉'], medal=pos<=3?medals[pos-1]:'';
+    const pos=i+1, medal=pos<=3?medals[pos-1]:'';
     const wr = p.participated>0 ? `${p.winRate.toFixed(1)}%` : '—';
     const fr = p.participated>0 ? `${p.freq.toFixed(0)}%`    : '—';
     const la = p.lanterna>0
@@ -565,6 +597,44 @@ function renderRanking() {
       <td class="num freq">${fr}</td>
       <td class="num">${la}</td>
     </tr>`;
+  }).join('');
+
+  // ── Mobile cards ──
+  cards.innerHTML = rows.map((p,i)=>{
+    const pos=i+1, medal=pos<=3?medals[pos-1]:'', rcCls=pos<=3?`rc-${pos}`:'';
+    const wr  = p.participated>0 ? `${p.winRate.toFixed(1)}%` : '—';
+    const fr  = p.participated>0 ? `${p.freq.toFixed(0)}%`    : '—';
+    const la  = p.lanterna>0 ? `${p.lanterna}x` : '—';
+    const wrGood = p.winRate>=20 ? 'good' : '';
+    const laRed  = p.lanterna>0  ? 'red'  : '';
+    return `<div class="rank-card ${rcCls}">
+      <div class="rank-card-header">
+        <div class="rank-card-pos">${medal||pos}</div>
+        <div class="rank-card-name">${esc(p.name)}</div>
+        <div class="rank-card-wins">
+          <div class="rank-card-wins-num">${p.wins}</div>
+          <div class="rank-card-wins-lbl">vitória${p.wins!==1?'s':''}</div>
+        </div>
+      </div>
+      <div class="rank-card-stats">
+        <div class="rc-stat">
+          <div class="rc-stat-val">${p.points}</div>
+          <div class="rc-stat-lbl">Pontos</div>
+        </div>
+        <div class="rc-stat">
+          <div class="rc-stat-val ${wrGood}">${wr}</div>
+          <div class="rc-stat-lbl">% Vitória</div>
+        </div>
+        <div class="rc-stat">
+          <div class="rc-stat-val">${fr}</div>
+          <div class="rc-stat-lbl">Freq.</div>
+        </div>
+        <div class="rc-stat">
+          <div class="rc-stat-val ${laRed}">${la}</div>
+          <div class="rc-stat-lbl">🪫</div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -731,7 +801,7 @@ window.undoElimination = undoElimination;
 function finishMatch(){
   if(!live||live.active.length!==1) return;
   const results=[live.active[0],...[...live.eliminated].reverse()];
-  state.tournaments.push({id:uid(),date:live.date,name:live.name,results});
+  state.tournaments.push({id:uid(), date:live.date, name:live.name, results});
   saveState(); live=null; closeModal('modal-live'); renderTournaments(); toast('Torneio salvo! 🏆');
 }
 window.finishMatch = finishMatch;
@@ -835,4 +905,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
