@@ -6,13 +6,11 @@
   "display": "standalone",
   "background_color": "#112d1c",
   "theme_color": "#112d1c",
-  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
     }
   ]
 }
